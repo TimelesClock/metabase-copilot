@@ -1,0 +1,34 @@
+/* Import theme variables first */
+@import "./theme.css";
+
+/* Import component styles */
+@import "./sidebar.css";
+
+@import "./settings.css";
+
+@import "./admin.css";
+
+/* Any global styles can go here */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure proper stacking context for the sidebar */
+#sql-assistant-sidebar {
+  isolation: isolate;
+}
+
+@font-face {
+  font-family: "password";
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://jsbin-user-assets.s3.amazonaws.com/rafaelcastrocouto/password.ttf);
+}
+
+input.key {
+  font-family: "password";
+  width: 100px;
+  height: 32px;
+}

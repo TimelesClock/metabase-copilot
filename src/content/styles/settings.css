@@ -1,0 +1,77 @@
+/* Modal width consistency fixes */
+.settings-content {
+  padding: 24px;
+  width: 100%;
+  max-width: 800px;
+  min-width: 400px;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Input width constraints */
+.input-group {
+  margin-bottom: 16px;
+  max-width: 400px;
+}
+
+/* Keys section constraints */
+.keys-section {
+  margin-top: 24px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.keys-header {
+  max-width: 100%;
+}
+
+.save-button {
+  max-width: 50%;
+}
+
+.keys-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  flex-wrap: nowrap;
+}
+
+.new-key-input {
+  width: 200px !important;
+  min-width: 150px;
+}
+
+/* Table container constraints */
+.keys-table-container {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.keys-table {
+  min-width: 650px; /* Ensure minimum width for content */
+  max-width: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .settings-content {
+    padding: 16px;
+    min-width: 320px;
+  }
+
+  .input-group {
+    max-width: 100%;
+  }
+
+  .keys-table {
+    min-width: 450px;
+  }
+
+  .new-key-input {
+    width: 150px !important;
+  }
+}

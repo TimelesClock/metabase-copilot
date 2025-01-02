@@ -1,0 +1,61 @@
+:root {
+    /* Base colors */
+    --background: #ffffff;
+    --foreground: #1a1a1a;
+    
+    /* Primary colors - using Metabase blue */
+    --primary: #0052CC;
+    --primary-hover: #0747A6;
+    --primary-foreground: #ffffff;
+    
+    /* Muted colors */
+    --muted: #f8f8f8ee;
+    --muted-foreground: #b1b1b1;
+    
+    /* Border colors */
+    --border: #e2e8f0;
+    --border-hover: #cbd5e1;
+    
+    /* Card colors */
+    --card: #ffffff;
+    --card-foreground: #1a1a1a;
+    
+    /* Warning colors */
+    --warning: #fff3cd;
+    --warning-foreground: #856404;
+    --warning-border: #ffeeba;
+    
+    /* Scrollbar */
+    --scrollbar: #cbd5e1;
+
+    --error: #dc2626;
+    --error-light: #fef2f2;
+
+    --success: #16a34a;
+    --success-light: #dcfce7;
+    
+    /* Font */
+    --font-sans: system-ui, -apple-system, sans-serif;
+  }
+
+  @media (max-width: 768px) {
+    .settings-content {
+      padding: 16px;
+    }
+  
+    .keys-table th:nth-child(3),
+    .keys-table th:nth-child(4),
+    .keys-table td:nth-child(3),
+    .keys-table td:nth-child(4) {
+      display: none;
+    }
+  
+    .keys-table th:nth-child(1) { width: 30%; }
+    .keys-table th:nth-child(2) { width: 30%; }
+    .keys-table th:nth-child(5) { width: 20%; }
+    .keys-table th:nth-child(6) { width: 20%; }
+  
+    .new-key-input {
+      width: 150px !important;
+    }
+  }
