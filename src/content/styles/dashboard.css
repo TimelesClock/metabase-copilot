@@ -1,0 +1,264 @@
+/* Dashboard Session Controller */
+.dashboard-session-controller {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+}
+
+.session-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.session-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.current-session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--muted);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+}
+
+.current-session.active .status-indicator {
+  background: var(--success);
+}
+
+.session-info {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+.session-info.active {
+  color: var(--foreground);
+}
+
+.session-info-details {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
+}
+
+.session-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--foreground);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-button:hover {
+  background: var(--muted);
+  border-color: var(--border-hover);
+}
+
+.action-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Sessions List */
+.sessions-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+}
+
+.session-item:last-child {
+  border-bottom: none;
+}
+
+.session-item:hover {
+  background: var(--muted);
+}
+
+.session-item-info {
+  flex: 1;
+}
+
+.session-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+  margin-bottom: 4px;
+}
+
+.session-item-date {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.join-session {
+  padding: 6px 12px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.join-session:hover {
+  background: var(--primary-hover);
+}
+
+.empty-state {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+/* Loading States */
+.action-button.loading,
+.join-session.loading {
+  position: relative;
+  color: transparent;
+}
+
+.action-button.loading::after,
+.join-session.loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  left: 50%;
+  margin: -8px 0 0 -8px;
+  border: 2px solid var(--border);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: button-loading 0.6s linear infinite;
+}
+
+@keyframes button-loading {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* src/content/styles/dashboard-initializer.css */
+
+.dashboard-initializer {
+    padding: 16px;
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
+}
+
+.initializer-content {
+    background: var(--muted);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.initializer-header {
+    margin-bottom: 12px;
+}
+
+.initializer-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.initializer-description {
+    font-size: 13px;
+    color: var(--muted-foreground);
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+}
+
+.init-status {
+    display: none;
+    justify-content: center;
+    padding: 12px;
+}
+
+.loading-spinner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted-foreground);
+}
+
+.loading-spinner svg {
+    animation: spin 1s linear infinite;
+}
+
+.loading-spinner span {
+    font-size: 13px;
+}
+
+.initializer-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.action-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-button.primary {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    border: none;
+}
+
+.action-button.primary:hover {
+    background: var(--primary-hover);
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

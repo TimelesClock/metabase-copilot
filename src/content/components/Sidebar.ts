@@ -1,12 +1,21 @@
-import { state } from '../state/state';
-import { handleMessage } from './MessageHandler';
+// src/content/components/Sidebar.ts
+
+import { state, clearMessages, loadMessages } from '../state/state';
+import { handleQueryMessage, handleDashboardMessage } from './MessageHandler';
 import { loadMessageHistory } from './MessageHandler';
 import { createSettingsModal } from './SettingsModal';
+import { getCurrentMessages } from '../state/state';
+import { DashboardInitializer } from './DashboardInitializer';
+import { setupDatabaseButton } from './DatabasePicker';
 
 export const createSidebar = () => {
   const sidebar = document.createElement('div');
   sidebar.id = 'sql-assistant-sidebar';
   sidebar.className = 'sql-assistant-sidebar';
+
+  // Set sidebar mode based on current page
+  const isDashboardMode = window.location.pathname.includes('/dashboard');
+  sidebar.setAttribute('data-mode', isDashboardMode ? 'dashboard' : 'query');
 
   const handle = document.createElement('div');
   handle.className = 'sidebar-handle';
@@ -18,7 +27,7 @@ export const createSidebar = () => {
   const messagesContainer = document.createElement('div');
   messagesContainer.className = 'messages-container';
 
-  // Load existing message history
+  // Load existing message history for current mode
   loadMessageHistory(messagesContainer);
 
   const controlsContainer = document.createElement('div');
@@ -62,7 +71,6 @@ export const createSidebar = () => {
 
   const input = document.createElement('textarea');
   input.className = 'chat-input';
-  input.placeholder = 'Type your query here...';
 
   const sendButton = document.createElement('button');
   sendButton.className = 'send-button';
@@ -83,8 +91,44 @@ export const createSidebar = () => {
   sidebar.appendChild(chatContainer);
   sidebar.appendChild(handle);
 
-  // Create and append settings modal
-  // const settingsModal = createSettingsModal();
+  if (isDashboardMode) {
+    // Extract dashboard ID from URL
+    const pathMatch = window.location.pathname.match(/\/dashboard\/(\d+)-[\w-]+/);
+    const dashboardId = pathMatch ? pathMatch[1] : null;
+
+    if (dashboardId) {
+      // Check for existing session before showing chat
+      DashboardInitializer.checkExistingSession(dashboardId).then(hasSession => {
+        if (hasSession) {
+          // Existing session found - enable chat
+          input.disabled = false;
+          sendButton.disabled = false;
+          input.placeholder = 'Ask about this dashboard or suggest changes...';
+          setupDatabaseButton(chatContainer, messagesContainer)
+        } else {
+          // Show initializer and disable chat until initialized
+          const initializer = DashboardInitializer.createUI();
+          chatContainer.insertBefore(initializer, messagesContainer);
+
+          // Disable chat until initialized
+          input.disabled = true;
+          sendButton.disabled = true;
+
+          DashboardInitializer.setupHandlers(initializer, () => {
+            // Enable chat after initialization
+            input.disabled = false;
+            sendButton.disabled = false;
+            setupDatabaseButton(chatContainer, messagesContainer)
+          });
+        }
+      });
+    }
+  }else{
+    input.placeholder = 'Ask a question or provide context...';
+  }
+
+  // Load messages for current mode
+  loadMessages();
 
   settingsButton.addEventListener('click', (e) => {
     e.preventDefault();
@@ -99,7 +143,11 @@ export const createSidebar = () => {
   sendButton.addEventListener('click', () => {
     const message = input.value.trim();
     if (message) {
-      handleMessage(message, sidebar);
+      if (isDashboardMode) {
+        handleDashboardMessage(message, sidebar);
+      } else {
+        handleQueryMessage(message, sidebar);
+      }
       input.value = '';
     }
   });
@@ -112,41 +160,44 @@ export const createSidebar = () => {
   });
 
   resetButton.addEventListener('click', () => {
-    state.messageHistory = [];
-    localStorage.setItem('messageHistory', JSON.stringify(state.messageHistory)); // Clear local storage
+    clearMessages(); // This now clears mode-specific messages
     messagesContainer.innerHTML = '';
     input.value = '';
   });
 
   revertButton.addEventListener('click', () => {
-    if (state.messageHistory.length > 0) {
-      const lastMessage = state.messageHistory[state.messageHistory.length - 1];
+    const messages = getCurrentMessages();
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
 
-      if (lastMessage.type === 'assistant') {
-        // Remove last two messages (assistant and user) from state
-        state.messageHistory.splice(-2);
-        localStorage.setItem('messageHistory', JSON.stringify(state.messageHistory));
+      if (lastMessage.role === 'assistant') {
+        // Remove last two messages (assistant and user)
+        messages.splice(-2);
 
-        // Remove last two messages from UI
-        const messages = messagesContainer.querySelectorAll('.message');
-        if (messages.length >= 2) {
-          messages[messages.length - 1].remove();
-          messages[messages.length - 2].remove();
+        // Remove from UI
+        const messageElements = messagesContainer.querySelectorAll('.message');
+        if (messageElements.length >= 2) {
+          messageElements[messageElements.length - 1].remove();
+          messageElements[messageElements.length - 2].remove();
         }
       } else {
-        // Remove only the last message (user) from state
-        state.messageHistory.pop();
-        localStorage.setItem('messageHistory', JSON.stringify(state.messageHistory));
+        // Remove only the last message (user)
+        messages.pop();
 
-        // Remove last message from UI
-        const messages = messagesContainer.querySelectorAll('.message');
-        if (messages.length >= 1) {
-          messages[messages.length - 1].remove();
+        // Remove from UI
+        const messageElements = messagesContainer.querySelectorAll('.message');
+        if (messageElements.length >= 1) {
+          messageElements[messageElements.length - 1].remove();
         }
       }
+
+      // Update storage for current mode
+      const storageKey = isDashboardMode ? 'dashboardMessages' : 'queryMessages';
+      localStorage.setItem(storageKey, JSON.stringify(messages));
     }
   });
 
   document.body.appendChild(sidebar);
   return sidebar;
 };
+

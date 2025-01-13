@@ -1,0 +1,138 @@
+.expandable-section {
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  width: 100%; /* Force full width */
+  box-sizing: border-box;
+}
+
+.expandable-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--background);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.expandable-header:hover {
+  background: var(--muted);
+}
+
+.expandable-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--foreground);
+}
+
+.expandable-icon {
+  display: inline-flex;
+  color: var(--muted-foreground);
+  transform: rotate(-90deg);
+  transition: transform 0.2s ease;
+}
+
+.expandable-icon.expanded {
+  transform: rotate(0deg);
+}
+
+.expandable-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+  text-transform: capitalize;
+}
+
+.expandable-timestamp {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.expandable-content {
+  display: none;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.expandable-content.expanded {
+  display: block;
+}
+
+.expandable-main-content {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Code block container */
+.expandable-main-content pre {
+  margin: 4px 0;
+  padding: 8px;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow-x: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.expandable-main-content pre code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tool-call-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Status badge */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1;
+  height: 24px;
+  width: fit-content;
+}
+
+.status.success {
+  background: var(--success-light);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.status.error {
+  background: var(--error-light);
+  color: var(--error);
+  border: 1px solid var(--error-border);
+}
+
+/* Logs section */
+.expandable-logs {
+  padding: 8px 12px;
+  background: var(--muted);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tool-calls-container {
+    margin-top: 4px;
+}

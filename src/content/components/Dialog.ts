@@ -6,7 +6,7 @@ export interface TabConfig {
 }
 
 export class Dialog {
-  private dialog: HTMLElement;
+  public dialog: HTMLElement;
   private overlay: HTMLElement;
   private content: HTMLElement;
   private previousActiveElement: HTMLElement | null = null;

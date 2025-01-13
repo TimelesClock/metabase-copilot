@@ -2,16 +2,21 @@
 .sql-assistant-sidebar {
   position: fixed;
   top: 0;
-  right: -400px;
-  width: 400px;
+  right: -410px;
+  width: 410px;
   height: 100vh;
   background: var(--background);
   box-shadow: -4px 0 6px rgba(0, 0, 0, 0.1);
   transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 9999;
+  z-index: 1000;
   display: flex;
   font-family: var(--font-sans);
 }
+
+/* .sql-assistant-sidebar[data-mode="dashboard"]  {
+  width: 700px;
+  right: -700px;
+} */
 
 .sql-assistant-sidebar.open {
   right: 0;
@@ -92,6 +97,7 @@
 
 /* Messages container */
 .messages-container {
+  scrollbar-gutter: stable;
   flex: 1;
   overflow-y: auto;
   display: flex;
@@ -127,7 +133,6 @@
 .message:hover {
   background-color: var(--muted-hover);
 } */
-
 
 .message-header {
   display: flex;
@@ -187,13 +192,11 @@
 /* User message styling */
 .user-message {
   background: var(--background);
-
 }
 
 /* Assistant message styling */
 .assistant-message {
   background: var(--muted);
-
 }
 
 /* Thinking indicator */
@@ -213,9 +216,15 @@
 }
 
 @keyframes pulse {
-  0% { opacity: 0.5; }
-  50% { opacity: 1; }
-  100% { opacity: 0.5; }
+  0% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
 }
 
 /* Input container */

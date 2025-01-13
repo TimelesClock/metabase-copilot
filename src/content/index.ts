@@ -4,15 +4,25 @@ import getMetabaseVersion from '../functions/getMetabaseVersion';
 import { loadMetabaseQuestion } from './utils/loadMetabaseQuestion';
 import './styles/index.css';
 
-function isQuestionPage() {
-    return window.location.pathname.includes('/question');
+function isMetabasePage() {
+    const pathname = window.location.pathname;
+    const hostname = window.location.hostname;
+
+    // Check if it's a question or dashboard page
+    const isQuestionOrDashboard = pathname.includes('/question') || pathname.includes('/dashboard');
+    if (!isQuestionOrDashboard) return false;
+
+    // Check if metabase is in the domain or path
+    return hostname.startsWith('metabase.') ||
+        hostname.includes('.metabase.') ||
+        pathname.includes('/metabase/');
 }
 
 function handleUrlChange() {
-    if (!isQuestionPage() && state.isContentScriptLoaded) {
+    if (!isMetabasePage() && state.isContentScriptLoaded) {
         destroyElements();
         state.isContentScriptLoaded = false;
-    } else if (isQuestionPage() && !state.isContentScriptLoaded) {
+    } else if (isMetabasePage() && !state.isContentScriptLoaded) {
         main();
     }
 }
@@ -46,7 +56,7 @@ async function main() {
     }
 
     setupElements();
-    console.log('SQL Assistant initialized successfully');
+    console.log('SQL Assistant initialized successfully for Metabase');
 }
 
 // Set up URL change detection
@@ -57,7 +67,7 @@ const observer = new MutationObserver(() => {
 // Start observing the document with the configured parameters
 observer.observe(document, { subtree: true, childList: true });
 
-// Also handle regular navigation events
+// Handle navigation events
 window.addEventListener('popstate', handleUrlChange);
 window.addEventListener('pushstate', handleUrlChange);
 window.addEventListener('replacestate', handleUrlChange);
@@ -65,12 +75,12 @@ window.addEventListener('replacestate', handleUrlChange);
 // Initial load
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        if (isQuestionPage()) {
+        if (isMetabasePage()) {
             main();
         }
     });
 } else {
-    if (isQuestionPage()) {
+    if (isMetabasePage()) {
         main();
     }
 }

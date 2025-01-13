@@ -108,13 +108,13 @@ interface QuestionUpdates {
                             ...updates.visualization_settings
                         });
                     }
-
+                    console.log('Updated question:');
                     // Apply the updates
                     updatedQuestion.update(null, {
                         reload: false,
                         shouldUpdateUrl: updatedQuestion.query().isEditable()
                     })
-
+                    resolve()
 
                 } catch (error) {
                     console.error('Error in updateQuestion:', error);

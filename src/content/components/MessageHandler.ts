@@ -1,35 +1,130 @@
-import { state } from '../state/state';
-import { clearAndPasteContent, clickRunButton } from '../../utils/textareaUtils';
-import { loadMetabaseQuestion, MetabaseQuestion } from '../../content/utils/loadMetabaseQuestion';
-import { RawLLMContent } from '../types/types';
+import { state, getCurrentMessages, addMessage, updateMessageToolCalls } from '../state/state';
+import { MetabaseQuestion } from '../../content/utils/loadMetabaseQuestion';
+import { RawLLMContent, Message, DashboardToolCall } from '../types/types';
 import { checkDatabaseSelected, showDatabaseWarning } from './DatabaseHandler';
 import { hideThinkingIndicator, showThinkingIndicator } from './ThinkingIndicator';
 import { pushPreviousQueryContent } from '../utils/queryHistory';
 import nlToSqlRequest from '../../functions/nlToSqlRequest';
+import { getDashboardService } from '../services/DashboardService';
 
-const mapLLMResponseToMetabaseQuestion = (llmData) => {
-  return {
-    name: llmData.name,
-    description: llmData.description,
-    display: llmData.display_type,
-    displayIsLocked: true,
-    visualization_settings: {
-      ...llmData.visualization_settings,
-      "graph.show_values": true
-    }
-  };
+interface ToolCallResult {
+  type: string;
+  status: 'success' | 'error';
+  result?: any;
+  error?: string;
+}
+
+interface ParsedToolCall {
+  type: string;
+  status: string;
+  result: any;
+  params?: string; // Store params as string to parse later
+  logs: string[];
+  timestamp: string;
+}
+
+const parseToolCalls = (toolCallsXml: string): ParsedToolCall[] => {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(toolCallsXml, 'text/xml');
+  const toolCalls = xmlDoc.querySelectorAll('tool_call');
+
+  return Array.from(toolCalls).map(call => ({
+    type: call.getAttribute('type') || '',
+    status: call.getAttribute('status') || '',
+    timestamp: call.getAttribute('timestamp') || new Date().toISOString(),
+    logs: JSON.parse(call.querySelector('logs')?.textContent || '[]'),
+    params: call.querySelector('params')?.textContent || '{}',
+    result: JSON.parse(call.querySelector('result')?.textContent || '{}')
+  }));
 };
 
-export const addMessageToChat = (content: string, type: 'user' | 'assistant', metabaseQuestion?: MetabaseQuestion, rawLLMResponse?: RawLLMContent[]) => {
+export const createExpandableSection = (
+  title: string,
+  content: string,
+  logs: string[] = [],
+  timestamp: string,
+  initiallyExpanded: boolean = false
+): HTMLElement => {
+  const section = document.createElement('div');
+  section.className = 'expandable-section';
+
+  const header = document.createElement('div');
+  header.className = 'expandable-header';
+
+  const leftSide = document.createElement('div');
+  leftSide.className = 'expandable-header-left';
+
+  const icon = document.createElement('span');
+  icon.className = `expandable-icon ${initiallyExpanded ? 'expanded' : ''}`;
+  icon.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" 
+      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  `;
+
+  const titleSpan = document.createElement('span');
+  titleSpan.className = 'expandable-title';
+  titleSpan.textContent = title;
+
+  const timestampSpan = document.createElement('span');
+  timestampSpan.className = 'expandable-timestamp';
+  timestampSpan.textContent = new Date(timestamp).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  leftSide.appendChild(icon);
+  leftSide.appendChild(titleSpan);
+
+  header.appendChild(leftSide);
+  header.appendChild(timestampSpan);
+
+  const contentDiv = document.createElement('div');
+  contentDiv.className = `expandable-content ${initiallyExpanded ? 'expanded' : ''}`;
+
+  if (logs.length > 0) {
+    const logsDiv = document.createElement('div');
+    logsDiv.className = 'expandable-logs';
+    logsDiv.innerHTML = logs.join('<br>');
+    contentDiv.appendChild(logsDiv);
+  }
+
+  const mainContent = document.createElement('div');
+  mainContent.className = 'expandable-main-content';
+  mainContent.innerHTML = content;
+  contentDiv.appendChild(mainContent);
+
+  section.appendChild(header);
+  section.appendChild(contentDiv);
+
+  header.addEventListener('click', () => {
+    const isExpanded = contentDiv.classList.contains('expanded');
+    contentDiv.classList.toggle('expanded');
+    icon.classList.toggle('expanded');
+  });
+
+  return section;
+};
+
+export const addMessageToChat = (
+  content: string,
+  role: 'user' | 'assistant',
+  metabaseQuestion?: MetabaseQuestion | null,
+  rawLLMResponse?: RawLLMContent[]
+): HTMLElement => {
+  const currentTimestamp = new Date().toISOString();
+
   const messageWrapper = document.createElement('div');
-  messageWrapper.className = `message ${type}-message`;
+  messageWrapper.className = `message ${role}-message`;
+  messageWrapper.setAttribute('data-timestamp', currentTimestamp);  // Add timestamp attribute
 
   const messageHeader = document.createElement('div');
   messageHeader.className = 'message-header';
 
   const name = document.createElement('span');
   name.className = 'message-name';
-  name.textContent = type === 'user' ? 'You' : 'Assistant';
+  name.textContent = role === 'user' ? 'You' : 'Assistant';
 
   const timestamp = document.createElement('span');
   timestamp.className = 'message-timestamp';
@@ -43,51 +138,20 @@ export const addMessageToChat = (content: string, type: 'user' | 'assistant', me
 
   const messageContent = document.createElement('div');
   messageContent.className = 'message-content';
-  messageContent.textContent = content;
+
+  // Main content section
+  const mainContent = document.createElement('div');
+  mainContent.className = 'main-content';
+  mainContent.textContent = content;
+  messageContent.appendChild(mainContent);
+
+  // Tool calls container
+  const toolCallsContainer = document.createElement('div');
+  toolCallsContainer.className = 'tool-calls-container';
+  messageContent.appendChild(toolCallsContainer);
 
   messageWrapper.appendChild(messageHeader);
   messageWrapper.appendChild(messageContent);
-
-  // Add load visualization button if it's an assistant message with viz data
-  if (type === 'assistant' && rawLLMResponse) {
-    try {
-      const rawText = rawLLMResponse[0].text.replace(/```json\n|\n```/g, '').trim();
-      const data = JSON.parse(rawText);
-      if (data.sql) {
-        const loadVizButton = document.createElement('button');
-        loadVizButton.className = 'control-button load-viz-button mt-2';
-        loadVizButton.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="16 12 12 8 8 12"/>
-            <line x1="12" y1="16" x2="12" y2="8"/>
-          </svg>
-          <span>Load visualization</span>
-        `;
-
-        loadVizButton.addEventListener('click', async () => {
-          try {
-            const pasted = await clearAndPasteContent(data.sql);
-            if (pasted) {
-              await clickRunButton();
-              // Add a small delay to ensure content is processed
-              await new Promise(resolve => setTimeout(resolve, 100));
-              // Finally, update Metabase question which might refresh the page
-              await loadMetabaseQuestion(metabaseQuestion);
-
-            }
-          } catch (error) {
-            console.error('Error updating Metabase:', error);
-          }
-        });
-
-        messageWrapper.appendChild(loadVizButton);
-      }
-    } catch (e) {
-      // If parsing fails, don't add the button
-      console.debug('No visualization data in message');
-    }
-  }
 
   const messagesContainer = document.querySelector('.messages-container');
   if (messagesContainer) {
@@ -95,22 +159,119 @@ export const addMessageToChat = (content: string, type: 'user' | 'assistant', me
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
-  state.messageHistory.push({ content, type, timestamp: new Date().toISOString(), raw_llm_response: rawLLMResponse, metabase_question: metabaseQuestion });
-  localStorage.setItem('messageHistory', JSON.stringify(state.messageHistory));
+  const message: Message = {
+    content,
+    role,
+    timestamp: currentTimestamp,  // Use same timestamp
+    raw_llm_response: rawLLMResponse,
+    metabase_question: metabaseQuestion,
+    tool_calls: '<tool_calls></tool_calls>'
+  };
+
+  addMessage(message);
+
+  return messageWrapper;
+};
+
+export const updateMessageWithToolCall = (
+  messageElement: HTMLElement,
+  toolCall: DashboardToolCall,
+  result: ToolCallResult
+) => {
+  const toolCallsContainer = messageElement.querySelector('.tool-calls-container');
+  if (!toolCallsContainer) return;
+
+  const timestamp = messageElement.getAttribute('data-timestamp');
+  if (!timestamp) return;
+
+  // Create section with tool call details
+  const toolCallSection = createExpandableSection(
+    `${toolCall.type.replace(/_/g, ' ')}`,
+    `
+      <div class="tool-call-details">
+        <div class="status ${result.status}">
+          ${result.status === 'success' ? '✓' : '❌'} ${result.status.toUpperCase()}
+        </div>
+        <pre><code>${JSON.stringify({ params: toolCall.params, ...result }, null, 2)}</code></pre>
+      </div>
+    `,
+    [`⏳ Executing ${toolCall.type.replace(/_/g, ' ')}...`],
+    new Date().toISOString(),
+    false
+  );
+
+  toolCallsContainer.appendChild(toolCallSection);
+
+  // Store minimal information in tool calls XML
+  const messages = getCurrentMessages();
+  const messageIndex = messages.findIndex(m => m.timestamp === timestamp);
+
+  if (messageIndex >= 0) {
+    const currentMessage = messages[messageIndex];
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(
+      currentMessage.tool_calls || '<tool_calls></tool_calls>',
+      'text/xml'
+    );
+
+    const toolCallsElement = xmlDoc.querySelector('tool_calls');
+    if (toolCallsElement) {
+      const toolCallElement = xmlDoc.createElement('tool_call');
+      toolCallElement.setAttribute('type', toolCall.type);
+      toolCallElement.setAttribute('status', result.status);
+      toolCallElement.setAttribute('timestamp', new Date().toISOString());
+
+      // Store params
+      if (toolCall.type !== 'preview_chart') {
+        const paramsElement = xmlDoc.createElement('params');
+        paramsElement.textContent = JSON.stringify(toolCall.params);
+        toolCallElement.appendChild(paramsElement);
+      }
+
+      // Store minimal result - only status and error if any
+      const resultElement = xmlDoc.createElement('result');
+      resultElement.textContent = JSON.stringify({
+        status: result.status,
+        result: result.result,
+        ...(result.error && { error: result.error })
+      });
+      toolCallElement.appendChild(resultElement);
+
+      toolCallsElement.appendChild(toolCallElement);
+      updateMessageToolCalls(timestamp, xmlDoc.documentElement.outerHTML);
+    }
+  }
+};
+
+const getToolCallParams = (raw_llm_response?: RawLLMContent[]) => {
+  if (!raw_llm_response?.length) return null;
+
+  const toolCall = raw_llm_response.find(r => r.type === 'tool_call');
+  if (!toolCall) return null;
+
+  try {
+    return JSON.parse(toolCall.text).params;
+  } catch (e) {
+    console.error('Error parsing tool call params:', e);
+    return null;
+  }
 };
 
 export const loadMessageHistory = (messagesContainer: HTMLElement) => {
-  const storedHistory = JSON.parse(localStorage.getItem('messageHistory') || '[]');
-  storedHistory.forEach(({ content, type, timestamp, raw_llm_response, metabase_question }) => {
+  const messages = getCurrentMessages();
+
+  messages.forEach((message) => {
+    const { content, role, timestamp, raw_llm_response, metabase_question, tool_calls } = message;
     const messageWrapper = document.createElement('div');
-    messageWrapper.className = `message ${type}-message`;
+    messageWrapper.className = `message ${role}-message`;
+    messageWrapper.setAttribute('data-timestamp', timestamp);
 
     const messageHeader = document.createElement('div');
     messageHeader.className = 'message-header';
 
     const name = document.createElement('span');
     name.className = 'message-name';
-    name.textContent = type === 'user' ? 'You' : 'Assistant';
+    name.textContent = role === 'user' ? 'You' : 'Assistant';
 
     const timestampEl = document.createElement('span');
     timestampEl.className = 'message-timestamp';
@@ -124,62 +285,78 @@ export const loadMessageHistory = (messagesContainer: HTMLElement) => {
 
     const messageContent = document.createElement('div');
     messageContent.className = 'message-content';
-    messageContent.textContent = content;
 
+    // Main content
+    const mainContent = document.createElement('div');
+    mainContent.className = 'main-content mb-2';
+    mainContent.textContent = content;
+    messageContent.appendChild(mainContent);
+
+    // Tool calls container
+    const toolCallsContainer = document.createElement('div');
+    toolCallsContainer.className = 'tool-calls-container';
+
+    // Add tool calls if they exist
+    if (tool_calls) {
+      const toolCalls = parseToolCalls(tool_calls);
+      toolCalls.forEach(toolCall => {
+        const params = getToolCallParams(raw_llm_response) || JSON.parse(toolCall.params || '{}');
+        const section = createExpandableSection(
+          `${toolCall.type.replace(/_/g, ' ')}`,
+          `
+            <div class="tool-call-details">
+              <div class="status ${toolCall.status}">
+                ${toolCall.status === 'success' ? '✓' : '❌'} ${toolCall.status.toUpperCase()}
+              </div>
+              <pre><code>${JSON.stringify({ params, ...toolCall.result }, null, 2)}</code></pre>
+            </div>
+          `,
+          toolCall.logs,
+          toolCall.timestamp,
+          false
+        );
+        toolCallsContainer.appendChild(section);
+      });
+    }
+
+    messageContent.appendChild(toolCallsContainer);
     messageWrapper.appendChild(messageHeader);
     messageWrapper.appendChild(messageContent);
-
-    if (type === 'assistant' && raw_llm_response) {
-      try {
-        const rawText = raw_llm_response[0].text.replace(/```json\n|\n```/g, '').trim();
-        const data = JSON.parse(rawText);
-        if (data.sql) {
-          const loadVizButton = document.createElement('button');
-          loadVizButton.className = 'control-button load-viz-button';
-          loadVizButton.style.marginTop = '0.5rem';
-          loadVizButton.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="16 12 12 8 8 12"/>
-              <line x1="12" y1="16" x2="12" y2="8"/>
-            </svg>
-            <span>Load visualization</span>
-          `;
-
-          loadVizButton.addEventListener('click', async () => {
-            try {
-              const pasted = await clearAndPasteContent(data.sql);
-              if (pasted) {
-                await clickRunButton();
-                // Add a small delay to ensure content is processed
-                await new Promise(resolve => setTimeout(resolve, 100));
-                // Finally, update Metabase question which might refresh the page
-                await loadMetabaseQuestion(metabase_question);
-
-              }
-            } catch (error) {
-              console.error('Error updating Metabase:', error);
-            }
-          });
-
-          messageWrapper.appendChild(loadVizButton);
-        }
-      } catch (e) {
-        // If parsing fails, don't add the button
-        console.debug('No visualization data in message');
-      }
-
-    }
 
     messagesContainer.appendChild(messageWrapper);
   });
 
-  if (storedHistory.length > 0) {
+  if (messages.length > 0) {
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 };
 
-export const handleMessage = async (message: string, sidebar: HTMLElement) => {
+export const setMessageLoading = (
+  messageElement: HTMLElement,
+  loading: boolean = true
+) => {
+  const contentElement = messageElement.querySelector('.main-content');
+  if (!contentElement) return;
+
+  if (loading) {
+    messageElement.classList.add('loading');
+    const currentContent = contentElement.textContent?.trim() || '';
+    contentElement.innerHTML = `
+      <div class="flex items-center">
+        <span class="loading-spinner mr-2"></span>
+        ${currentContent}
+      </div>
+    `;
+  } else {
+    messageElement.classList.remove('loading');
+    const currentContent = contentElement.textContent?.trim() || '';
+
+    contentElement.textContent = currentContent;
+  }
+};
+
+
+export const handleQueryMessage = async (message: string, sidebar: HTMLElement) => {
   if (state.isOperationRunning) return;
 
   if (!checkDatabaseSelected()) {
@@ -193,14 +370,14 @@ export const handleMessage = async (message: string, sidebar: HTMLElement) => {
   addMessageToChat(message, 'user');
   pushPreviousQueryContent();
 
-  // Get the last N messages (e.g., last 10) to provide context
-  const recentMessages = state.messageHistory.slice(-10);
+  // Get recent messages for context
+  const recentMessages = getCurrentMessages().slice(-10);
 
   await nlToSqlRequest(
     state.configDict,
     message,
     state.databaseName,
-    (content: string, done: boolean, metabase_question, raw_llm_response) => {
+    (done: boolean, metabase_question, raw_llm_response, content?: string) => {
       if (content) {
         addMessageToChat(content, 'assistant', metabase_question, raw_llm_response);
       }
@@ -214,6 +391,46 @@ export const handleMessage = async (message: string, sidebar: HTMLElement) => {
       state.isOperationRunning = false;
       hideThinkingIndicator();
     },
-    recentMessages // Pass the message history
+    recentMessages
+  );
+};
+
+export const handleDashboardMessage = async (message: string, sidebar: HTMLElement) => {
+  if (state.isOperationRunning) return;
+
+  const dashboardService = getDashboardService();
+  if (!dashboardService.getCurrentSession()) {
+    addMessageToChat("Please start or join a dashboard session first.", "assistant");
+    return;
+  }
+
+  state.isOperationRunning = true;
+  showThinkingIndicator();
+
+  addMessageToChat(message, 'user');
+
+  // Get recent messages for context
+  const recentMessages = getCurrentMessages().slice(-10);
+
+  await nlToSqlRequest(
+    state.configDict,
+    message,
+    state.databaseName,
+    async (done: boolean, metabase_question, raw_llm_response, content?: string) => {
+      if (content) {
+        addMessageToChat(content, 'assistant', metabase_question, raw_llm_response);
+      }
+      if (done) {
+        state.isOperationRunning = false;
+        hideThinkingIndicator();
+      }
+    },
+    (errorMessage: string) => {
+      state.isOperationRunning = false;
+      hideThinkingIndicator();
+      addMessageToChat(`Error: ${errorMessage}`, "assistant");
+    },
+    recentMessages,
+    'dashboard'
   );
 };

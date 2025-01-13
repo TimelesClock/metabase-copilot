@@ -1,6 +1,9 @@
+// src/content/components/SettingsModal.ts
+
 import { Dialog, TabConfig } from './Dialog';
 import { GeneralSettings } from './tabs/GeneralSettings';
 import { AdminSettings } from './tabs/AdminSettings';
+
 
 export const createSettingsModal = () => {
   const tabs: TabConfig[] = [
@@ -24,9 +27,11 @@ export const createSettingsModal = () => {
     GeneralSettings.setupHandlers(dialog);
     AdminSettings.setupHandlers(dialog);
 
-    // Load settings for both tabs
+
+    // Load settings for all tabs
     GeneralSettings.loadSettings();
     AdminSettings.loadSettings();
+
   });
 
   // Show dialog and initialize

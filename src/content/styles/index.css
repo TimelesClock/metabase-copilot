@@ -8,6 +8,10 @@
 
 @import "./admin.css";
 
+@import "./dashboard.css";
+
+@import "./tools.css";
+
 /* Any global styles can go here */
 * {
   box-sizing: border-box;

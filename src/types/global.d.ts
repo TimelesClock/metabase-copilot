@@ -1,10 +1,11 @@
 // src/types/global.d.ts
-export {};
+export { };
 
 declare global {
     interface Window {
         MetabaseHelper?: {
-            updateQuestion: ( updates: any) => Promise<void>;
+            updateQuestion: (updates: any) => Promise<void>;
         };
+        Metabase: any;
     }
-  }
+}

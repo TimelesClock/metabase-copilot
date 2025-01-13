@@ -4,6 +4,15 @@ export interface MetabaseQuestion {
     description?: string;
     display?: string;
     visualization_settings?: Record<string, any>;
+    dataset_query: {
+        type: string;
+        native: {
+            query: string;
+        };
+        database: number;
+    };
+    parameters?: any[];
+    result_metadata?: any[];
 }
 
 interface LoaderOptions {

@@ -1,5 +1,6 @@
 import { createSidebar } from './Sidebar';
 import { setupDatabaseObserver } from './DatabaseHandler';
+import { DashboardOverlay } from './DashboardOverlay';
 
 let documentObserver: MutationObserver | null = null;
 let databaseCleanup: (() => void) | null = null;
@@ -11,6 +12,9 @@ export const setupElements = () => {
     }
 
     createSidebar();
+    if (window.location.pathname.includes('/dashboard/')) {
+        new DashboardOverlay();
+    }
 
     databaseCleanup = setupDatabaseObserver();
 

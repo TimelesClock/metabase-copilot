@@ -17,7 +17,8 @@
     "activeTab"
   ],
   "host_permissions": [
-    "*://*/question*"
+    "*://*/question*",
+    "*://*/dashboard*"
   ],
   "background": {
     "service_worker": "dist/background.js"
@@ -41,7 +42,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*/question*"],
+      "matches": ["*://*/question*","*://*/dashboard*"],
       "js": ["dist/content.js"],
       "css": ["dist/content.css"]
     }
